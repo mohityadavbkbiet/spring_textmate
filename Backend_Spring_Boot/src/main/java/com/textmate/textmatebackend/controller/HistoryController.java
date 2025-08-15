@@ -22,8 +22,12 @@ public class HistoryController {
 
     @GetMapping
     public ResponseEntity<ApiResponse> getUserHistory(Authentication auth) {
-        String userId = (auth != null && auth.isAuthenticated()) ? auth.getName() : null;
-        List<OperationLog> logs = logRepo.findByUserId(userId);
+        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof com.textmate.textmatebackend.model.User)) {
+            return ResponseEntity.ok(new ApiResponse(true, "No history found.", java.util.Collections.emptyList()));
+        }
+
+        com.textmate.textmatebackend.model.User user = (com.textmate.textmatebackend.model.User) auth.getPrincipal();
+        List<OperationLog> logs = logRepo.findByUserId(user.getId());
 
         if (logs.isEmpty()) {
             return ResponseEntity.ok(new ApiResponse(true, "No history found.", logs));

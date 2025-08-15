@@ -75,17 +75,6 @@ public class TextService {
      * @param sessionId The session ID from the client, used for anonymous tracking.
      */
     private void logOperation(String operationType, String originalText, String transformedText, String analysisResultJson, String sessionId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = null;
-
-        // Check if the user is authenticated and not an anonymous user (Spring Security's default anonymous principal)
-        if (authentication != null && authentication.isAuthenticated() &&
-            !(authentication.getPrincipal() instanceof String) && // Not "anonymousUser" string
-            authentication.getPrincipal() instanceof User) { // Ensure it's our custom User object
-            User user = (User) authentication.getPrincipal();
-            userId = user.getId();
-        }
-
         OperationLog log = new OperationLog();
         log.setOperationType(operationType);
         log.setOriginalText(originalText);
@@ -93,15 +82,16 @@ public class TextService {
         log.setAnalysisResultJson(analysisResultJson);
         log.setTimestamp(LocalDateTime.now());
 
-        // Assign userId if available, otherwise assign sessionId
-        if (userId != null) {
-            log.setUserId(userId);
-            log.setSessionId(null); // Ensure session ID is null if user is logged in
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated() &&
+            !(authentication.getPrincipal() instanceof String) &&
+            authentication.getPrincipal() instanceof User) {
+            User user = (User) authentication.getPrincipal();
+            log.setUser(user);
         } else if (sessionId != null && !sessionId.trim().isEmpty()) {
             log.setSessionId(sessionId);
-            log.setUserId(null); // Ensure user ID is null if anonymous
         } else {
-            // Fallback for cases where neither userId nor sessionId is present (should ideally not happen with frontend logic)
             logger.warn("Operation logged without userId or sessionId. OperationType: {}", operationType);
         }
         operationLogRepository.save(log);

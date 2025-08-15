@@ -20,7 +20,7 @@ public class HistoryService {
      * @param userId The ID of the user whose history is to be retrieved.
      * @return A list of OperationLog objects representing the user's history.
      */
-    public List<OperationLog> getHistoryForUser(String userId) {
+    public List<OperationLog> getHistoryForUser(Long userId) {
         return operationLogRepository.findByUserId(userId);
     }
 }
