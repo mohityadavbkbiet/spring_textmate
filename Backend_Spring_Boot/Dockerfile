@@ -1,26 +1,36 @@
+# Stage 1: Build the application
 FROM amazoncorretto:17 AS builder
 WORKDIR /app
 
-# 1) Copy Maven wrapper & pom.xml for dependency caching
+# Copy Maven wrapper and pom.xml to cache dependencies
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 
-# 2) Ensure wrapper is executable & pre-fetch dependencies
+# Make mvnw executable and download dependencies
 RUN chmod +x mvnw && ./mvnw dependency:go-offline
 
-# 3) Copy application source and build the jar
+# Copy the source code and build the application
 COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
-# 4) Prepare runtime image
-FROM amazoncorretto:17
+# Stage 2: Create the production image
+FROM amazoncorretto:17-alpine-jre
 WORKDIR /app
 
-# Copy built jar from builder stage
+# Create a non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy the application jar from the builder stage
 COPY --from=builder /app/target/*.jar app.jar
 
-# Expose application port
+# Change ownership to the non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to the non-root user
+USER appuser
+
+# Expose the application port
 EXPOSE 8000
 
-# Run the Spring Boot application
+# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

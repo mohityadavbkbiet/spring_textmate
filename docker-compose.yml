@@ -1,13 +1,20 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo:6.0
-    container_name: mongodb
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
     ports:
-      - '27017:27017'
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: textmate_db
     volumes:
-      - mongodb_data:/data/db
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 10
 
   backend:
     build:
@@ -17,9 +24,12 @@ services:
     ports:
       - '8000:8000'
     environment:
-      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/textmate
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/textmate_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: password
     depends_on:
-      - mongodb
+      mysql:
+        condition: service_healthy
 
   frontend:
     build:
@@ -34,4 +44,4 @@ services:
       - ./Frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
-  mongodb_data: {}
+  mysql_data: {}
